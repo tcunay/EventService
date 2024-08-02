@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using BestHTTP;
 using Cysharp.Threading.Tasks;
@@ -12,16 +13,24 @@ public class EventService : MonoBehaviour
     private const string ServerUrl = "";
     private const string SavedEventsPrefsKey = "SavedEvents";
 
-    private List<GameEvent> _events = new();
-    
+    private readonly List<List<GameEvent>> _sendingEvents = new();
+    private List<GameEvent> _events;
     private CancellationTokenSource _sendingTokenSource;
+
+    private void Awake()
+    {
+        LoadSavedEvents();
+        CreateNewSendingTokenSource();
+    }
 
     private void Start()
     {
-        LoadSavedEvents();
-        ResendEvents(_events);
+        if (_events.Count > 0)
+        {
+            SendEventsProcess().Forget();
+        }
     }
-    
+
     private void OnDestroy()
     {
         DisposeSendingTokenSource();
@@ -34,13 +43,13 @@ public class EventService : MonoBehaviour
         AddEvent(type, data);
         SendEventsProcess().Forget();
     }
-    
+
     private void ResendEvents(List<GameEvent> eventsToSend)
     {
         ReturnEvents(eventsToSend);
         SendEventsProcess().Forget();
     }
-    
+
     private async UniTask SendEventsProcess()
     {
         await WaitCooldown();
@@ -49,7 +58,8 @@ public class EventService : MonoBehaviour
 
     private async UniTask WaitCooldown()
     {
-        await UniTask.Delay(TimeSpan.FromSeconds(CooldownBeforeSend), cancellationToken: _sendingTokenSource.Token);
+        CancellationToken token = _sendingTokenSource.Token;
+        await UniTask.Delay(TimeSpan.FromSeconds(CooldownBeforeSend), cancellationToken: token);
     }
 
     private void AddEvent(string type, string data)
@@ -62,17 +72,20 @@ public class EventService : MonoBehaviour
     {
         var eventsToSend = new List<GameEvent>(_events);
         _events.Clear();
-
-        HTTPRequest request = CreateRequest(eventsToSend);
+        _sendingEvents.Add(eventsToSend);
 
         try
         {
+            HTTPRequest request = CreateRequest(eventsToSend);
             await request.Send();
 
-            if (request.IsOk() == false)
+            if (request.IsOk())
             {
-                ResendEvents(eventsToSend);
+                _sendingEvents.Remove(eventsToSend);
+                Debug.Log($"Request Sended = {JsonConvert.SerializeObject(eventsToSend)}");
             }
+            else
+                throw new HttpRequestException("Response is not OK");
         }
         catch
         {
@@ -89,7 +102,7 @@ public class EventService : MonoBehaviour
     {
         var request = new HTTPRequest(new Uri(ServerUrl), HTTPMethods.Post);
         request.SetHeader("Content-Type", "application/json");
-        request.RawData = System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new { events = eventsToSend }));
+        request.RawData = System.Text.Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(eventsToSend));
 
         return request;
     }
@@ -111,16 +124,31 @@ public class EventService : MonoBehaviour
         _sendingTokenSource?.Dispose();
         _sendingTokenSource = null;
     }
-    
+
     private void LoadSavedEvents()
     {
         string savedEvents = PlayerPrefs.GetString(SavedEventsPrefsKey, "[]");
         _events = JsonConvert.DeserializeObject<List<GameEvent>>(savedEvents) ?? new List<GameEvent>();
+        Debug.Log($"Loaded = {JsonConvert.SerializeObject(_events)}");
     }
 
     private void SaveEvents()
     {
-        PlayerPrefs.SetString(SavedEventsPrefsKey, JsonConvert.SerializeObject(_events));
+        List<GameEvent> savingEvents = CreateSavingEvents();
+
+        Debug.Log($"Save = {JsonConvert.SerializeObject(savingEvents)}");
+        PlayerPrefs.SetString(SavedEventsPrefsKey, JsonConvert.SerializeObject(savingEvents));
         PlayerPrefs.Save();
+    }
+
+    private List<GameEvent> CreateSavingEvents()
+    {
+        var savingEvents = new List<GameEvent>(_events);
+        foreach (var events in _sendingEvents)
+        {
+            savingEvents.AddRange(events);
+        }
+
+        return savingEvents;
     }
 }
