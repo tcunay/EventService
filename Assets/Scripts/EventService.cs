@@ -20,13 +20,13 @@ public class EventService : MonoBehaviour
     private void Awake()
     {
         LoadSavedEvents();
-        CreateNewSendingTokenSource();
     }
 
     private void Start()
     {
         if (_events.Count > 0)
         {
+            RestartCooldown();
             SendEventsProcess().Forget();
         }
     }
