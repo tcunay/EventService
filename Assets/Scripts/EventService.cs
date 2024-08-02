@@ -80,9 +80,7 @@ public class EventService : MonoBehaviour
             await request.Send();
 
             if (request.IsOk())
-            {
                 Debug.Log($"Request Sended = {JsonConvert.SerializeObject(eventsToSend)}");
-            }
             else
                 throw new HttpRequestException("Response is not OK");
         }
