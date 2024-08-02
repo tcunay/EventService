@@ -81,7 +81,6 @@ public class EventService : MonoBehaviour
 
             if (request.IsOk())
             {
-                _sendingEvents.Remove(eventsToSend);
                 Debug.Log($"Request Sended = {JsonConvert.SerializeObject(eventsToSend)}");
             }
             else
@@ -90,6 +89,10 @@ public class EventService : MonoBehaviour
         catch
         {
             ResendEvents(eventsToSend);
+        }
+        finally
+        {
+            _sendingEvents.Remove(eventsToSend);
         }
     }
 

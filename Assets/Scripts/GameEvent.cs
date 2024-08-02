@@ -1,7 +1,7 @@
 using System;
 
 [Serializable]
-public class GameEvent
+public readonly struct GameEvent
 {
     public string Type { get; }
     public string Data { get; }
