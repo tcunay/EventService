@@ -127,21 +127,21 @@ public class EventService : MonoBehaviour
 
     private void LoadSavedEvents()
     {
-        string savedEvents = PlayerPrefs.GetString(SavedEventsPrefsKey, "[]");
+        string savedEvents = PlayerPrefs.GetString(SavedEventsPrefsKey, defaultValue: "[]");
         _events = JsonConvert.DeserializeObject<List<GameEvent>>(savedEvents) ?? new List<GameEvent>();
         Debug.Log($"Loaded = {JsonConvert.SerializeObject(_events)}");
     }
 
     private void SaveEvents()
     {
-        List<GameEvent> savingEvents = CreateSavingEvents();
+        List<GameEvent> eventsToSave = CreateEventsToSave();
 
-        Debug.Log($"Save = {JsonConvert.SerializeObject(savingEvents)}");
-        PlayerPrefs.SetString(SavedEventsPrefsKey, JsonConvert.SerializeObject(savingEvents));
+        Debug.Log($"Save = {JsonConvert.SerializeObject(eventsToSave)}");
+        PlayerPrefs.SetString(SavedEventsPrefsKey, JsonConvert.SerializeObject(eventsToSave));
         PlayerPrefs.Save();
     }
 
-    private List<GameEvent> CreateSavingEvents()
+    private List<GameEvent> CreateEventsToSave()
     {
         var savingEvents = new List<GameEvent>(_events);
         foreach (var events in _sendingEvents)
