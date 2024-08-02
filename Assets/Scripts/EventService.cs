@@ -19,7 +19,7 @@ public class EventService : MonoBehaviour
     private void Start()
     {
         LoadSavedEvents();
-        ResendEvents(_events).Forget();
+        ResendEvents(_events);
     }
     
     private void OnDestroy()
@@ -32,6 +32,12 @@ public class EventService : MonoBehaviour
     {
         RestartCooldown();
         AddEvent(type, data);
+        SendEventsProcess().Forget();
+    }
+    
+    private void ResendEvents(List<GameEvent> eventsToSend)
+    {
+        ReturnEvents(eventsToSend);
         SendEventsProcess().Forget();
     }
     
@@ -65,19 +71,13 @@ public class EventService : MonoBehaviour
 
             if (request.IsOk() == false)
             {
-                ResendEvents(eventsToSend).Forget();
+                ResendEvents(eventsToSend);
             }
         }
         catch
         {
-            ResendEvents(eventsToSend).Forget();
+            ResendEvents(eventsToSend);
         }
-    }
-    
-    private async UniTaskVoid ResendEvents(List<GameEvent> eventsToSend)
-    {
-        ReturnEvents(eventsToSend);
-        await SendEventsProcess();
     }
 
     private void ReturnEvents(List<GameEvent> eventsToSend)
